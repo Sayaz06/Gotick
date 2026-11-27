@@ -1,22 +1,21 @@
-// ══ SERVICE WORKER · Go-Tick ══
+// ══ SERVICE WORKER · Kindle Learning Tool (faktaftbahasa) ══
 // Tujuan: app boleh dipasang (download) di phone, dan masih boleh dibuka bila internet putus.
 //   1) Halaman app (index.html): ambil dari internet DAHULU, jadi versi terbaru selepas Deploy terus dipakai.
 //      Salinan simpanan hanya dipakai bila tiada internet, atau bila internet terlalu perlahan (lebih TUNGGU_MS).
 //   2) Fail kecil dalam repo ini (manifest, ikon): guna salinan simpanan, dan kemas kini di belakang.
 //   3) Skrip Firebase dari gstatic (versi tetap): simpan sekali, kemudian guna salinan itu.
 //   4) Firestore, Auth dan semua alamat luar lain TIDAK disentuh. Semuanya terus ke internet seperti biasa.
-//      (Data Go-Tick tanpa internet diurus oleh Firestore sendiri: tick disimpan di phone dan dihantar bila ada internet.)
 // Naikkan VERSI hanya bila fail ini diubah. Simpanan lama app ini dipadam sendiri.
-var APP = 'gotick';
+var APP = 'faktaftbahasa';
 var VERSI = APP + '-v1';
-var TUNGGU_MS = 3000;
+var TUNGGU_MS = 5000;
 var ASAS = ['./', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 var SDK = [
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js',
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js'
 ];
-var TAJUK_APP = 'Go-Tick';
+var TAJUK_APP = 'Kindle Learning Tool';
 var SKOP = new URL(self.registration.scope).pathname;
 var UTAMA = new URL('./', self.registration.scope).href;
 
@@ -120,11 +119,11 @@ function luarTalian() {
   var html = '<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
     '<title>' + TAJUK_APP + '</title></head>' +
-    '<body style="margin:0;padding:24px;font-family:system-ui,sans-serif;background:#020617;color:#e5e7eb;text-align:center;">' +
-    '<h1 style="font-size:1.3rem;color:#34d399;">✓ ' + TAJUK_APP + '</h1>' +
+    '<body style="margin:0;padding:24px;font-family:Georgia,serif;background:#fff;color:#000;text-align:center;">' +
+    '<h1 style="font-size:1.2rem;">' + TAJUK_APP + '</h1>' +
     '<p style="line-height:1.6;">Tiada sambungan internet. App ini belum pernah dibuka semasa ada internet pada peranti ini, jadi belum ada salinan untuk dipaparkan.</p>' +
     '<p style="line-height:1.6;">Sambungkan internet, kemudian tekan butang di bawah.</p>' +
-    '<button onclick="location.reload()" style="padding:12px 22px;font-size:1rem;font-weight:600;border:none;border-radius:999px;background:linear-gradient(135deg,#059669,#047857);color:#fff;">Cuba Lagi</button>' +
+    '<button onclick="location.reload()" style="padding:12px 20px;font-size:1rem;font-weight:bold;border:2px solid #000;border-radius:8px;background:#000;color:#fff;">CUBA LAGI</button>' +
     '</body></html>';
   return new Response(html, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 }
