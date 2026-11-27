@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Go-Tick</title>
+  <meta name="description" content="Senarai semak sebelum bergerak. Linked dengan app phone dan Kindle.">
+  <meta name="theme-color" content="#020617">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Go-Tick">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+    /* ══ WARNA & CORAK: sama dengan laci Go-Tick di app phone ══ */
+    :root {
+      --bg: #020617;
+      --text: #e5e7eb;
+      --subtext: #9ca3af;
+      --border-soft: #1f2937;
+      --border-mid: #4b5563;
+      --hijau: #34d399;
+      --hijau-muda: #6ee7b7;
+      --hijau-1: #059669;
+      --hijau-2: #047857;
+      --merah: #f87171;
+      --danger: #f97373;
+      --kuning: #fcd34d;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body { height: 100%; }
+    body {
+      background: radial-gradient(circle at top, #020617 0, #020617 40%, #000 100%);
+      background-color: #000;
+      color: var(--text);
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      overscroll-behavior-y: none;
+      overflow: hidden;
+    }
+    .app-shell {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px;
+      padding-top: max(16px, env(safe-area-inset-top));
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 18px;
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+      padding: 18px;
+      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: blur(18px);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      min-height: 0;
+    }
+    .section { display: none; flex-direction: column; flex: 1; min-height: 0; }
+    .section.active { display: flex; }
+
+    /* Butang (gaya app phone) */
+    .btn {
+      width: 100%;
+      border-radius: 999px;
+      padding: 12px 16px;
+      border: 1px solid transparent;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, opacity 0.12s ease;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.55; }
+    .btn-hijau {
+      background: linear-gradient(135deg, var(--hijau-1), var(--hijau-2));
+      border: none;
+      color: #fff;
+      box-shadow: 0 12px 30px rgba(5, 150, 105, 0.35);
+    }
+    .btn-secondary {
+      background: rgba(15, 23, 42, 0.9);
+      border-color: var(--border-mid);
+    }
+    .btn-sm { width: auto; padding: 7px 13px; font-size: 0.78rem; }
+    .garis-hijau { border-color: var(--hijau); color: var(--hijau); }
+    .garis-merah { border-color: var(--danger); color: var(--danger); }
+    .btn-merah {
+      background: rgba(127, 29, 29, 0.9);
+      border-color: rgba(248, 113, 113, 0.5);
+      color: #fee2e2;
+      box-shadow: 0 10px 26px rgba(127, 29, 29, 0.6);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-shrink: 0;
+    }
+    .tb-kanan { text-align: right; min-width: 0; }
+    .topbar-title { font-size: 1.1rem; font-weight: 600; }
+    .topbar-sub { font-size: 0.78rem; color: var(--subtext); }
+    .hijau { color: var(--hijau); }
+
+    /* Kotak ringkasan (corak kotak "Cara Guna" laci Go-Tick phone) */
+    .ringkas {
+      background: rgba(52, 211, 153, 0.08);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      border-radius: 12px;
+      padding: 11px 12px;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+    .ringkas.kecemasan { background: rgba(127, 29, 29, 0.15); border-color: rgba(239, 68, 68, 0.5); }
+    .ringkas-atas {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--hijau);
+    }
+    .ck-tajuk {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      word-break: break-word;
+    }
+    .segerak { font-size: 0.68rem; font-weight: 600; color: var(--subtext); white-space: nowrap; }
+    .segerak.ok { color: var(--hijau); }
+    .segerak.tunggu { color: var(--kuning); }
+    .bar {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(52, 211, 153, 0.12);
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .bar.kecil { height: 4px; margin-top: 9px; }
+    .bar-isi {
+      height: 100%;
+      width: 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--hijau-1), var(--hijau));
+      transition: width 0.3s ease;
+    }
+
+    .list {
+      border-radius: 14px;
+      border: 1px solid var(--border-soft);
+      background: rgba(15, 23, 42, 0.9);
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+      padding: 10px;
+      overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    .list::-webkit-scrollbar { width: 5px; }
+    .list::-webkit-scrollbar-thumb { background: rgba(52, 211, 153, 0.5); border-radius: 10px; }
+    .empty-state { text-align: center; font-size: 0.85rem; color: var(--subtext); padding: 18px 10px; line-height: 1.6; }
+
+    /* Kad destinasi (corak drawer-card laci Go-Tick phone) */
+    .drawer-card {
+      display: block;
+      width: 100%;
+      text-align: left;
+      color: var(--text);
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      border: 1px solid rgba(52, 211, 153, 0.25);
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .drawer-card:active { transform: scale(0.985); background: rgba(52, 211, 153, 0.08); }
+    .drawer-card.kecemasan { border: 1px solid rgba(239, 68, 68, 0.5); background: rgba(127, 29, 29, 0.15); }
+    .drawer-card.siap { border-color: rgba(52, 211, 153, 0.6); }
+    .gt-tajuk-atas { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .gt-tajuk-kiri { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; flex: 1; min-width: 0; }
+    .gt-tajuk-nama {
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.3;
+      word-break: break-word;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .gt-tajuk-kanan { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .pil-kecemasan {
+      font-size: 0.68rem;
+      font-weight: 700;
+      background: rgba(239, 68, 68, 0.8);
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 999px;
+      flex-shrink: 0;
+      letter-spacing: 0.02em;
+    }
+    .pil-kira {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--subtext);
+      border: 1px solid var(--border-mid);
+      border-radius: 999px;
+      padding: 2px 9px;
+    }
+    .pil-kira.siap { background: rgba(22, 163, 74, 0.18); color: #bbf7d0; border-color: rgba(34, 197, 94, 0.5); }
+    .chev { font-size: 1.2rem; color: var(--hijau); line-height: 1; }
+
+    /* Checklist: kumpulan + item (corak editor laci Go-Tick phone) */
+    .gt-kumpulan { margin-bottom: 10px; border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 10px; overflow: hidden; }
+    .gt-kumpulan.kecemasan { border-color: rgba(239, 68, 68, 0.5); }
+    .gt-kumpulan-kepala {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(52, 211, 153, 0.1);
+    }
+    .gt-kumpulan.kecemasan .gt-kumpulan-kepala { background: rgba(180, 0, 0, 0.15); }
+    .gt-kumpulan-kepala .ikon { font-size: 0.85rem; }
+    .gt-kumpulan-kepala .nama {
+      flex: 1;
+      min-width: 0;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--hijau);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      word-break: break-word;
+    }
+    .gt-kumpulan.kecemasan .gt-kumpulan-kepala .nama { color: var(--merah); }
+    .gt-kumpulan-kepala .kira { font-size: 0.72rem; font-weight: 600; color: var(--subtext); flex-shrink: 0; }
+    .gt-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border-soft);
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      -webkit-user-select: none;
+      user-select: none;
+      transition: background 0.12s ease;
+    }
+    .gt-item:last-child { border-bottom: none; }
+    .gt-item:active { background: rgba(52, 211, 153, 0.07); }
+    .gt-kotak {
+      width: 26px;
+      height: 26px;
+      flex-shrink: 0;
+      border: 2px solid var(--border-mid);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+    }
+    .gt-kotak svg { width: 16px; height: 16px; opacity: 0; transform: scale(0.4); transition: opacity 0.15s ease, transform 0.18s ease; }
+    .gt-item.ticked .gt-kotak {
+      background: linear-gradient(135deg, var(--hijau-1), var(--hijau-2));
+      border-color: var(--hijau);
+      box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.15);
+    }
+    .gt-item.ticked .gt-kotak svg { opacity: 1; transform: scale(1); }
+    .gt-item.pop .gt-kotak { transform: scale(1.15); }
+    .gt-nama { flex: 1; font-size: 0.95rem; line-height: 1.35; word-break: break-word; transition: color 0.15s ease; }
+    .gt-item.ticked .gt-nama { text-decoration: line-through; color: var(--subtext); }
+
+    .siap-banner {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-align: center;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: rgba(22, 163, 74, 0.18);
+      color: #bbf7d0;
+      border: 1px solid rgba(34, 197, 94, 0.5);
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+    .siap-banner.tunjuk { display: flex; }
+
+    .msg { font-size: 0.82rem; text-align: center; min-height: 1.1em; margin-top: 8px; color: var(--subtext); line-height: 1.5; }
+    .msg.error { color: var(--merah); }
+    .msg:empty { display: none; }
+    .footer { margin-top: 10px; text-align: center; font-size: 0.72rem; color: var(--subtext); line-height: 1.5; flex-shrink: 0; }
+
+    /* Skrin PIN */
+    #sc-pin { overflow-y: auto; }
+    .pin-wrap { margin: auto 0; padding: 12px 4px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .pin-logo { width: 84px; height: 84px; border-radius: 22px; box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.25), 0 14px 40px rgba(5, 150, 105, 0.35); margin-bottom: 16px; }
+    .title-main { font-size: 1.8rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .subtitle { font-size: 0.9rem; color: var(--subtext); margin-bottom: 22px; }
+    .pin-label { font-size: 0.82rem; font-weight: 700; color: var(--hijau); margin-bottom: 8px; }
+    #pin-borang { width: 100%; max-width: 300px; display: flex; flex-direction: column; align-items: stretch; }
+    .pin-input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-mid);
+      border-radius: 12px;
+      color: #fff;
+      padding: 13px;
+      font-size: 1.4rem;
+      letter-spacing: 0.5em;
+      text-indent: 0.5em;
+      text-align: center;
+      outline: none;
+      margin-bottom: 12px;
+      transition: border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+    .pin-input:focus { border-color: var(--hijau); box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.18); }
+    .pin-input::placeholder { color: #4b5563; letter-spacing: 0.2em; font-size: 1rem; }
+
+    .pil-pasang {
+      display: none;
+      align-self: center;
+      margin-top: 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--hijau-muda);
+      background: rgba(52, 211, 153, 0.08);
+      border: 1px solid rgba(52, 211, 153, 0.35);
+      border-radius: 999px;
+      padding: 7px 14px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* Dialog pengesahan */
+    .dlg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(0, 0, 0, 0.6);
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .dlg.tunjuk { display: flex; }
+    .dlg-kotak {
+      width: 100%;
+      max-width: 360px;
+      background: rgba(15, 23, 42, 0.98);
+      border: 1px solid var(--border-mid);
+      border-radius: 18px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7);
+      padding: 20px;
+    }
+    .dlg-teks { font-size: 0.95rem; line-height: 1.5; margin-bottom: 16px; white-space: pre-line; word-break: break-word; }
+    .dlg-btn { display: flex; gap: 10px; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: max(24px, env(safe-area-inset-bottom));
+      transform: translateX(-50%) translateY(20px);
+      max-width: 90%;
+      background: rgba(15, 23, 42, 0.98);
+      border: 1px solid rgba(52, 211, 153, 0.4);
+      color: var(--text);
+      font-size: 0.82rem;
+      border-radius: 14px;
+      padding: 10px 16px;
+      width: max-content;
+      line-height: 1.4;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 60;
+      text-align: center;
+    }
+    .toast.tunjuk { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="card">
+
+      <!-- ══ SKRIN PIN: log masuk / buka Go-Tick (sama seperti Kindle) ══ -->
+      <section id="sc-pin" class="section active">
+        <div class="pin-wrap">
+          <img class="pin-logo" src="icon-192.png" alt="">
+          <div class="title-main">Go-Tick</div>
+          <div class="subtitle">Linked dengan phone · PIN</div>
+          <div id="pin-borang" style="display:none;">
+            <div class="pin-label" id="pin-label">Masukkan PIN</div>
+            <input id="pin-input" class="pin-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="PIN" autocomplete="off">
+            <button id="btn-pin" class="btn btn-hijau" type="button">Masuk</button>
+          </div>
+          <div id="pin-msg" class="msg">Memuatkan...</div>
+        </div>
+      </section>
+
+      <!-- ══ SKRIN: SENARAI DESTINASI ══ -->
+      <section id="sc-list" class="section">
+        <div class="topbar">
+          <button id="btn-kunci" class="btn btn-secondary btn-sm garis-hijau" type="button">🔒 Kunci</button>
+          <div class="tb-kanan">
+            <div class="topbar-title hijau">✓ Go-Tick</div>
+            <div class="topbar-sub">Senarai semak sebelum bergerak</div>
+          </div>
+        </div>
+        <div class="ringkas">
+          <div class="ringkas-atas"><span id="gt-list-status">Go-Tick</span><span class="segerak" id="gt-segerak-list"></span></div>
+          <div class="bar"><div class="bar-isi" id="gt-list-bar"></div></div>
+        </div>
+        <div class="list" id="gt-tajuk-list"><div class="empty-state">Memuatkan...</div></div>
+        <div id="gt-list-err" class="msg error"></div>
+        <div class="footer">Tambah dan ubah destinasi di app phone (laci Go-Tick). Tick dan untick di sini.</div>
+      </section>
+
+      <!-- ══ SKRIN: CHECKLIST DALAM DESTINASI ══ -->
+      <section id="sc-check" class="section">
+        <div class="topbar">
+          <button id="btn-gt-back-list" class="btn btn-secondary btn-sm" type="button">← Destinasi</button>
+          <button id="btn-gt-untick-all" class="btn btn-secondary btn-sm garis-merah" type="button">Untick Semua</button>
+        </div>
+        <div class="ringkas" id="gt-check-kepala">
+          <div class="ck-tajuk" id="gt-check-title"></div>
+          <div class="ringkas-atas"><span id="gt-check-status">—</span><span class="segerak" id="gt-segerak-check"></span></div>
+          <div class="bar"><div class="bar-isi" id="gt-check-bar"></div></div>
+        </div>
+        <div class="siap-banner" id="gt-siap">✓ Semua item sudah ditick. Selamat bergerak.</div>
+        <div class="list" id="gt-checklist"></div>
+        <div id="gt-check-err" class="msg error"></div>
+      </section>
+
+      <button id="btn-pasang" class="pil-pasang" type="button">Pasang Go-Tick di phone</button>
+    </div>
+  </div>
+
+  <div class="dlg" id="dlg" role="dialog" aria-modal="true">
+    <div class="dlg-kotak">
+      <div class="dlg-teks" id="dlg-teks"></div>
+      <div class="dlg-btn">
+        <button id="dlg-batal" class="btn btn-secondary" type="button">Batal</button>
+        <button id="dlg-ya" class="btn btn-merah" type="button">Ya</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script>
+  // ══════════════════════════════════════════
+  // GO-TICK (app phone khas)
+  // Fungsi sama dengan Go-Tick di Kindle: PIN, senarai destinasi, checklist ikut kumpulan, tick / untick, Untick Semua.
+  // Data dikongsi: users/{uid}/go_tick_tajuk (sama dengan Kindle dan laci Go-Tick di app phone).
+  // Tajuk, kumpulan dan item ditambah atau diubah di app phone. App ini hanya tick dan untick.
+  // ══════════════════════════════════════════
+  (function() {
+    'use strict';
+
+    // ── TETAPAN ──
+    var PIN_SETIAP_BUKA = true;    // true: minta PIN setiap kali Go-Tick dibuka (sama seperti Kindle) · false: terus buka selepas log masuk
+    var KUNCI_SELEPAS_MINIT = 5;   // app dikunci semula bila ditinggalkan (di belakang) lebih lama daripada ini
+
+    var firebaseConfig = {
+          apiKey: "AIzaSyAGLX_xxH_dQ06epX4XCXtuSHN0DwZFMjA",
+          authDomain: "stress-auti-action.firebaseapp.com",
+          projectId: "stress-auti-action",
+          storageBucket: "stress-auti-action.firebasestorage.app",
+          messagingSenderId: "792580618622",
+          appId: "1:792580618622:web:f0efb1d630e795584d5b2f",
+          measurementId: "G-JH11TRZLGF"
+        };
+    var ADMIN_EMAIL = 'adha86614@gmail.com';
+
+    function el(id) { return document.getElementById(id); }
+    function setText(id, t) { var e = el(id); if (e) e.textContent = t; }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ── Skrin ──
+    var skrin = 'sc-pin', skrinAkhir = 'sc-list';
+    function tunjuk(id) {
+      var s = document.querySelectorAll('.section'), i;
+      for (i = 0; i < s.length; i++) s[i].classList.toggle('active', s[i].id === id);
+      skrin = id;
+      el('btn-pasang').style.display = _pasang && id !== 'sc-check' ? 'block' : 'none';
+    }
+
+    // ── Toast & dialog ──
+    var _toastJam = null;
+    function toast(t) {
+      var e = el('toast');
+      e.textContent = t;
+      e.classList.add('tunjuk');
+      if (_toastJam) clearTimeout(_toastJam);
+      _toastJam = setTimeout(function() { e.classList.remove('tunjuk'); }, 2600);
+    }
+    var _dlgYa = null;
+    function sahkan(teks, labelYa, cb) {
+      setText('dlg-teks', teks);
+      setText('dlg-ya', labelYa || 'Ya');
+      _dlgYa = cb;
+      el('dlg').classList.add('tunjuk');
+    }
+    function tutupDialog() { el('dlg').classList.remove('tunjuk'); _dlgYa = null; }
+    el('dlg-batal').onclick = tutupDialog;
+    el('dlg').onclick = function(e) { if (e.target === this) tutupDialog(); };
+    el('dlg-ya').onclick = function() { var cb = _dlgYa; tutupDialog(); if (cb) cb(); };
+
+    // ── Butang PASANG (install) ──
+    var _pasang = null;
+    window.addEventListener('beforeinstallprompt', function(e) {
+      e.preventDefault();
+      _pasang = e;
+      tunjuk(skrin);
+    });
+    el('btn-pasang').onclick = function() {
+      if (!_pasang) return;
+      _pasang.prompt();
+      _pasang.userChoice.then(function() { _pasang = null; tunjuk(skrin); }).catch(function() {});
+    };
+    window.addEventListener('appinstalled', function() { _pasang = null; tunjuk(skrin); toast('Go-Tick sudah dipasang di phone.'); });
+
+    // ── Firebase ──
+    if (!window.firebase) {
+      setText('pin-msg', 'Tiada sambungan internet. Buka Go-Tick sekali semasa ada internet supaya app disimpan di phone ini.');
+      el('pin-msg').className = 'msg error';
+      return;
+    }
+    firebase.initializeApp(firebaseConfig);
+    var auth = firebase.auth();
+    var db = firebase.firestore();
+    // Simpan data di phone: Go-Tick boleh dibuka dan ditick tanpa internet, kemudian disegerakkan sendiri
+    try { db.enablePersistence({ synchronizeTabs: true }).catch(function() {}); } catch (e) {}
+
+    var currentUser = null, terbuka = false, sedangPin = false;
+
+    // ══════════════════════════════════════════
+    // PIN (log masuk sama seperti Kindle: PIN = kata laluan akaun yang dilink dengan phone)
+    // ══════════════════════════════════════════
+    var pinMod = 'tunggu'; // tunggu | login | buka
+    function tunjukPin(mod, mesej) {
+      pinMod = mod;
+      el('pin-borang').style.display = mod === 'tunggu' ? 'none' : '';
+      setText('pin-label', mod === 'buka' ? 'PIN untuk buka Go-Tick' : 'Masukkan PIN');
+      setText('btn-pin', mod === 'buka' ? 'Buka' : 'Masuk');
+      el('pin-input').value = '';
+      el('btn-pin').disabled = false;
+      el('pin-msg').className = 'msg';
+      setText('pin-msg', mesej || (mod === 'tunggu' ? 'Memuatkan...' : ''));
+      tunjuk('sc-pin');
+      if (mod !== 'tunggu') setTimeout(function() { try { el('pin-input').focus(); } catch (e) {} }, 150);
+    }
+    function pinRalat(t) { el('pin-msg').className = 'msg error'; setText('pin-msg', t); }
+
+    // Cap PIN (SHA-256) disimpan di phone ini selepas PIN disahkan dengan internet,
+    // supaya Go-Tick masih boleh dibuka dengan PIN bila tiada internet.
+    function capPin(uid, pin) {
+      if (!uid || !window.crypto || !crypto.subtle || !window.TextEncoder) return Promise.resolve(null);
+      return crypto.subtle.digest('SHA-256', new TextEncoder().encode('gotick|' + uid + '|' + pin)).then(function(b) {
+        return Array.prototype.map.call(new Uint8Array(b), function(x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+      }).catch(function() { return null; });
+    }
+    function simpanCapPin(uid, pin) {
+      capPin(uid, pin).then(function(h) {
+        if (h) { try { localStorage.setItem('gotick_pin', JSON.stringify({ u: uid, h: h })); } catch (e) {} }
+      });
+    }
+    function padanCapPin(pin) {
+      var s = null;
+      try { s = JSON.parse(localStorage.getItem('gotick_pin') || 'null'); } catch (e) {}
+      if (!s || !currentUser || s.u !== currentUser.uid) return Promise.resolve(null);
+      return capPin(s.u, pin).then(function(h) { return h ? h === s.h : null; });
+    }
+
+    function cubaPin() {
+      var pin = el('pin-input').value.trim();
+      if (!/^\d{4,6}$/.test(pin)) { pinRalat('PIN mesti 4 hingga 6 digit.'); return; }
+      el('pin-msg').className = 'msg';
+      setText('pin-msg', 'Mengesahkan...');
+      el('btn-pin').disabled = true;
+      sedangPin = true;
+      var tamat = new Promise(function(lulus, gagal) { setTimeout(function() { gagal({ code: 'tamat-masa' }); }, 10000); });
+      Promise.race([auth.signInWithEmailAndPassword(ADMIN_EMAIL, pin), tamat])
+        .then(function(c) {
+          var u = (c && c.user) || auth.currentUser;
+          sedangPin = false;
+          if (u) simpanCapPin(u.uid, pin);
+          bukaKunci(u);
+        })
+        .catch(function(e) {
+          var kod = (e && e.code) || '';
+          sedangPin = false;
+          el('btn-pin').disabled = false;
+          if (kod === 'auth/network-request-failed' || kod === 'tamat-masa') {
+            if (pinMod !== 'buka') { pinRalat('Tiada sambungan internet. Log masuk kali pertama memerlukan internet.'); return; }
+            padanCapPin(pin).then(function(ok) {
+              if (ok) bukaKunci(currentUser);
+              else if (ok === false) { pinRalat('PIN salah.'); el('pin-input').value = ''; }
+              else pinRalat('Tiada sambungan internet, dan PIN belum pernah disahkan di phone ini. Sambung internet sekali, kemudian cuba lagi.');
+            });
+            return;
+          }
+          el('pin-input').value = '';
+          if (kod === 'auth/wrong-password' || kod === 'auth/invalid-credential' || kod === 'auth/invalid-login-credentials') pinRalat('PIN salah.');
+          else if (kod === 'auth/user-not-found') pinRalat('PIN belum disediakan. Sediakan PIN di app phone dahulu.');
+          else if (kod === 'auth/too-many-requests') pinRalat('Terlalu banyak cubaan. Tunggu sebentar, kemudian cuba lagi.');
+          else pinRalat((e && e.message) || kod || 'Gagal log masuk.');
+        });
+    }
+    el('btn-pin').onclick = cubaPin;
+    el('pin-input').onkeydown = function(e) { if (e.key === 'Enter') cubaPin(); };
+
+    function bukaKunci(u) {
+      if (u) currentUser = u;
+      terbuka = true;
+      el('pin-input').value = '';
+      setText('pin-msg', '');
+      gtSubscribe();
+      if (skrinAkhir === 'sc-check' && gtActiveTajuk) { gtRenderChecklist(true); tunjuk('sc-check'); }
+      else { gtRenderTajukList(); tunjuk('sc-list'); }
+    }
+    function kunci() {
+      if (!currentUser) return;
+      if (skrin !== 'sc-pin') skrinAkhir = skrin;
+      terbuka = false;
+      tutupDialog();
+      tunjukPin('buka');
+    }
+    el('btn-kunci').onclick = kunci;
+
+    // Kunci semula bila app ditinggalkan lama (sama seperti keluar dan masuk semula Go-Tick di Kindle)
+    var _tersorok = 0;
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) { _tersorok = Date.now(); return; }
+      if (PIN_SETIAP_BUKA && terbuka && _tersorok && Date.now() - _tersorok > KUNCI_SELEPAS_MINIT * 60000) kunci();
+      _tersorok = 0;
+      gtRenderSegerak();
+    });
+
+    auth.onAuthStateChanged(function(user) {
+      var lama = currentUser;
+      currentUser = user;
+      if (!user) {
+        terbuka = false;
+        gtBerhenti();
+        gtAllTajuk = []; gtActiveTajuk = null; gtMeta.dimuat = false;
+        tunjukPin('login');
+        return;
+      }
+      if (lama && lama.uid !== user.uid) { gtBerhenti(); gtAllTajuk = []; gtActiveTajuk = null; gtMeta.dimuat = false; }
+      gtSubscribe(); // data dimuat di belakang skrin PIN, jadi senarai terus sedia bila dibuka
+      if (sedangPin) return; // cubaPin() akan buka sendiri
+      if (terbuka || !PIN_SETIAP_BUKA) bukaKunci(user);
+      else tunjukPin('buka');
+    });
+
+    // ══════════════════════════════════════════
+    // GO-TICK (sama dengan Kindle)
+    // ══════════════════════════════════════════
+    var gtAllTajuk = [];
+    var gtActiveTajuk = null;
+    var _gtUnsub = null, _gtUid = '';
+    var gtMeta = { dimuat: false, pending: false, cache: true, pernah: false };
+    try { gtMeta.pernah = localStorage.getItem('gotick_pernah_segerak') === '1'; } catch (e) {}
+    var _gtSig = '', _gtSigId = '', _gtListSig = '';
+
+    function gtSusun(a, b) {
+      if (a.isEmergency && !b.isEmergency) return -1;
+      if (!a.isEmergency && b.isEmergency) return 1;
+      return (a.order || 0) - (b.order || 0);
+    }
+    function gtKiraTick(items) { var n = 0, i; for (i = 0; i < items.length; i++) if (items[i] && items[i].ticked) n++; return n; }
+    function gtPeratus(a, b) { return b ? Math.round(a * 100 / b) : 0; }
+    function gtRef() { return db.collection('users').doc(currentUser.uid).collection('go_tick_tajuk'); }
+
+    function gtSubscribe() {
+      if (!currentUser) return;
+      if (_gtUnsub && _gtUid === currentUser.uid) return;
+      gtBerhenti();
+      _gtUid = currentUser.uid;
+      _gtUnsub = gtRef().onSnapshot({ includeMetadataChanges: true }, function(snap) {
+        // Simpanan phone masih kosong (kali pertama) → tunggu data dari internet dahulu, jangan terus kata "Tiada destinasi"
+        gtMeta.dimuat = gtMeta.dimuat || !snap.metadata.fromCache || !snap.empty || !navigator.onLine;
+        gtMeta.pending = snap.metadata.hasPendingWrites;
+        gtMeta.cache = snap.metadata.fromCache;
+        if (!snap.metadata.fromCache && !gtMeta.pernah) { gtMeta.pernah = true; try { localStorage.setItem('gotick_pernah_segerak', '1'); } catch (e) {} }
+        gtAllTajuk = [];
+        snap.forEach(function(d) { var x = d.data(); x.id = d.id; gtAllTajuk.push(x); });
+        gtAllTajuk.sort(gtSusun);
+        // Kemas kini destinasi yang sedang dibuka
+        if (gtActiveTajuk) {
+          var baru = null, i;
+          for (i = 0; i < gtAllTajuk.length; i++) if (gtAllTajuk[i].id === gtActiveTajuk.id) baru = gtAllTajuk[i];
+          if (baru) { gtActiveTajuk = baru; gtRenderChecklist(); }
+          else if (!snap.metadata.fromCache) {
+            gtActiveTajuk = null;
+            if (skrin === 'sc-check') { tunjuk('sc-list'); toast('Destinasi ini sudah dipadam di app phone.'); }
+            if (skrinAkhir === 'sc-check') skrinAkhir = 'sc-list';
+          }
+        }
+        gtRenderTajukList();
+        gtRenderSegerak();
+        setText('gt-list-err', '');
+      }, function(e) {
+        setText('gt-list-err', 'Gagal memuatkan: ' + (e.message || e.code));
+      });
+    }
+    function gtBerhenti() {
+      if (_gtUnsub) { try { _gtUnsub(); } catch (e) {} }
+      _gtUnsub = null; _gtUid = '';
+    }
+
+    // Status segerak: tick disimpan di phone dahulu, kemudian dihantar bila ada internet
+    function gtRenderSegerak() {
+      var t, k;
+      if (!gtMeta.dimuat) { t = ''; k = ''; }
+      else if (!navigator.onLine) { t = 'Luar talian · disimpan di phone'; k = 'tunggu'; }
+      else if (gtMeta.pending) { t = 'Menyegerak...'; k = 'tunggu'; }
+      else if (gtMeta.cache) { t = 'Menyambung...'; k = ''; }
+      else { t = '✓ Disegerakkan'; k = 'ok'; }
+      ['gt-segerak-list', 'gt-segerak-check'].forEach(function(id) {
+        var e = el(id);
+        e.textContent = t;
+        e.className = 'segerak' + (k ? ' ' + k : '');
+      });
+    }
+    window.addEventListener('online', function() { gtRenderSegerak(); gtRenderTajukList(); });
+    window.addEventListener('offline', function() { gtRenderSegerak(); gtRenderTajukList(); });
+
+    function gtRenderTajukList() {
+      var list = el('gt-tajuk-list');
+      if (!list) return;
+      var totalItems = 0, totalTicked = 0, i;
+      for (i = 0; i < gtAllTajuk.length; i++) {
+        var its = gtAllTajuk[i].items || [];
+        totalItems += its.length;
+        totalTicked += gtKiraTick(its);
+      }
+      setText('gt-list-status', 'Go-Tick · ' + totalTicked + '/' + totalItems + (totalItems && totalTicked === totalItems ? ' ✓' : ''));
+      el('gt-list-bar').style.width = gtPeratus(totalTicked, totalItems) + '%';
+      // Lukis semula hanya bila isi senarai berubah (tekanan pada kad tidak terputus semasa status segerak bertukar)
+      var sig = JSON.stringify([gtMeta.dimuat, !gtMeta.pernah && !navigator.onLine, gtAllTajuk.map(function(t) { var its = t.items || []; return [t.id, t.title || '', !!t.isEmergency, its.length, gtKiraTick(its)]; })]);
+      if (sig === _gtListSig && list.childNodes.length) return;
+      _gtListSig = sig;
+      if (!gtAllTajuk.length) {
+        list.innerHTML = '<div class="empty-state">' + (!gtMeta.dimuat ? 'Memuatkan...' :
+          (!gtMeta.pernah && !navigator.onLine) ? 'Tiada data Go-Tick tersimpan di phone ini lagi. Sambung internet sekali untuk memuatkan destinasi.' :
+          'Tiada destinasi. Tambah dari telefon.') + '</div>';
+        return;
+      }
+      list.innerHTML = '';
+      gtAllTajuk.forEach(function(t) {
+        var items = t.items || [];
+        var ticked = gtKiraTick(items);
+        var allDone = items.length > 0 && ticked === items.length;
+        var kad = document.createElement('button');
+        kad.type = 'button';
+        kad.className = 'drawer-card' + (t.isEmergency ? ' kecemasan' : '') + (allDone ? ' siap' : '');
+        kad.innerHTML =
+          '<div class="gt-tajuk-atas">' +
+            '<div class="gt-tajuk-kiri">' +
+              (t.isEmergency ? '<span class="pil-kecemasan">🚨 KECEMASAN</span>' : '') +
+              '<span class="gt-tajuk-nama">' + esc(t.title || 'Tanpa Tajuk') + '</span>' +
+            '</div>' +
+            '<div class="gt-tajuk-kanan">' +
+              '<span class="pil-kira' + (allDone ? ' siap' : '') + '">' + ticked + '/' + items.length + (allDone ? ' ✓' : '') + '</span>' +
+              '<span class="chev">›</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="bar kecil"><div class="bar-isi" style="width:' + gtPeratus(ticked, items.length) + '%"></div></div>';
+        kad.onclick = function() { gtOpenDestinasi(t); };
+        list.appendChild(kad);
+      });
+    }
+
+    function gtOpenDestinasi(t) {
+      gtActiveTajuk = t;
+      setText('gt-check-err', '');
+      gtRenderChecklist(true);
+      el('gt-checklist').scrollTop = 0;
+      tunjuk('sc-check');
+    }
+
+    var SVG_TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+    // Kumpulkan item ikut kumpulan (susunan asal) · kumpulan kecemasan naik ke atas (sama seperti Kindle)
+    function gtKumpulan(items) {
+      var groups = [], groupMap = {};
+      items.forEach(function(it, idx) {
+        var g = (it && it.group) || '';
+        if (!groupMap.hasOwnProperty(g)) {
+          groupMap[g] = groups.length;
+          groups.push({ name: g, items: [], isEmergency: !!(it && it.isEmergency) });
+        }
+        groups[groupMap[g]].items.push({ item: it || {}, idx: idx });
+      });
+      groups.sort(function(a, b) {
+        if (a.isEmergency && !b.isEmergency) return -1;
+        if (!a.isEmergency && b.isEmergency) return 1;
+        return 0;
+      });
+      return groups;
+    }
+
+    // penuh = true: lukis semula semua · selain itu: jika susunan item sama, kemas kini tanda tick sahaja (animasi tidak terputus)
+    function gtRenderChecklist(penuh) {
+      var box = el('gt-checklist');
+      if (!box || !gtActiveTajuk) return;
+      var t = gtActiveTajuk, items = t.items || [];
+      var ticked = gtKiraTick(items), allDone = items.length > 0 && ticked === items.length;
+
+      el('gt-check-title').innerHTML = (t.isEmergency ? '<span class="pil-kecemasan">🚨 KECEMASAN</span>' : '') + '<span>' + esc(t.title || 'Tanpa Tajuk') + '</span>';
+      el('gt-check-kepala').className = 'ringkas' + (t.isEmergency ? ' kecemasan' : '');
+      setText('gt-check-status', ticked + '/' + items.length + ' ditick' + (allDone ? ' ✓' : ''));
+      el('gt-check-bar').style.width = gtPeratus(ticked, items.length) + '%';
+      el('gt-siap').classList.toggle('tunjuk', allDone);
+      gtRenderSegerak();
+
+      if (!items.length) {
+        _gtSig = ''; _gtSigId = '';
+        box.innerHTML = '<div class="empty-state">Tiada item. Tambah dari telefon.</div>';
+        return;
+      }
+      var sig = JSON.stringify(items.map(function(it) { return [(it && it.group) || '', (it && it.name) || '', !!(it && it.isEmergency)]; }));
+      if (!penuh && sig === _gtSig && _gtSigId === t.id) {
+        var baris = box.querySelectorAll('.gt-item'), i, idx;
+        for (i = 0; i < baris.length; i++) {
+          idx = +baris[i].getAttribute('data-idx');
+          var on = !!(items[idx] && items[idx].ticked);
+          baris[i].classList.toggle('ticked', on);
+          baris[i].setAttribute('aria-checked', on ? 'true' : 'false');
+        }
+        gtKiraKumpulan(box, items);
+        return;
+      }
+      _gtSig = sig; _gtSigId = t.id;
+      box.innerHTML = '';
+      gtKumpulan(items).forEach(function(grp) {
+        var kotak = document.createElement('div');
+        kotak.className = 'gt-kumpulan' + (grp.isEmergency ? ' kecemasan' : '');
+        var h = '';
+        if (grp.name) {
+          h += '<div class="gt-kumpulan-kepala">' +
+            '<span class="ikon">' + (grp.isEmergency ? '🚨' : '📁') + '</span>' +
+            '<span class="nama">' + esc(grp.name) + '</span>' +
+            '<span class="kira" data-kira="' + esc(grp.items.map(function(x) { return x.idx; }).join(',')) + '"></span>' +
+          '</div>';
+        }
+        grp.items.forEach(function(entry) {
+          var it = entry.item;
+          h += '<button type="button" role="checkbox" class="gt-item' + (it.ticked ? ' ticked' : '') + '" data-idx="' + entry.idx + '" aria-checked="' + (it.ticked ? 'true' : 'false') + '">' +
+            '<span class="gt-kotak">' + SVG_TICK + '</span>' +
+            '<span class="gt-nama">' + esc(it.name || '') + '</span>' +
+          '</button>';
+        });
+        kotak.innerHTML = h;
+        box.appendChild(kotak);
+      });
+      gtKiraKumpulan(box, items);
+    }
+    function gtKiraKumpulan(box, items) {
+      var k = box.querySelectorAll('[data-kira]'), i, j, a, n;
+      for (i = 0; i < k.length; i++) {
+        a = k[i].getAttribute('data-kira').split(',');
+        for (j = 0, n = 0; j < a.length; j++) if (items[+a[j]] && items[+a[j]].ticked) n++;
+        k[i].textContent = n + '/' + a.length;
+      }
+    }
+    el('gt-checklist').onclick = function(e) {
+      var t = e.target;
+      while (t && t !== this && !(t.classList && t.classList.contains('gt-item'))) t = t.parentNode;
+      if (!t || t === this) return;
+      gtToggleItem(+t.getAttribute('data-idx'), t);
+    };
+
+    function gtSalin(o) { var x = {}, k; for (k in o) if (Object.prototype.hasOwnProperty.call(o, k)) x[k] = o[k]; return x; }
+    function gtSimpan(items) {
+      var id = gtActiveTajuk.id;
+      gtRef().doc(id).update({ items: items, updatedAt: Date.now() })
+        .catch(function(e) { setText('gt-check-err', 'Gagal simpan: ' + (e.message || e.code)); });
+    }
+
+    function gtToggleItem(idx, baris) {
+      if (!gtActiveTajuk || !currentUser) return;
+      var items = (gtActiveTajuk.items || []).slice();
+      if (idx < 0 || idx >= items.length) return;
+      var it = gtSalin(items[idx] || {});  // kekalkan semua maklumat item (cth tanda kecemasan)
+      it.ticked = !it.ticked;
+      items[idx] = it;
+      gtActiveTajuk.items = items;
+      setText('gt-check-err', '');
+      gtSimpan(items);
+      gtRenderChecklist();
+      if (baris) {
+        baris.classList.add('pop');
+        setTimeout(function() { baris.classList.remove('pop'); }, 160);
+      }
+      try { if (navigator.vibrate) navigator.vibrate(it.ticked ? 12 : 6); } catch (e) {}
+    }
+
+    function gtUntickSemua() {
+      if (!gtActiveTajuk || !currentUser) return;
+      var items = gtActiveTajuk.items || [];
+      if (!gtKiraTick(items)) { toast('Tiada item yang ditick.'); return; }
+      sahkan('Untick semua item dalam "' + (gtActiveTajuk.title || '') + '"?', 'Untick Semua', function() {
+        if (!gtActiveTajuk) return;
+        var baru = (gtActiveTajuk.items || []).map(function(it) { var x = gtSalin(it || {}); x.ticked = false; return x; });
+        gtActiveTajuk.items = baru;
+        gtSimpan(baru);
+        gtRenderChecklist();
+        toast('Semua item sudah diuntick.');
+      });
+    }
+
+    el('btn-gt-back-list').onclick = function() {
+      gtRenderTajukList();
+      tunjuk('sc-list');
+    };
+    el('btn-gt-untick-all').onclick = gtUntickSemua;
+
+    // Butang BACK phone: dari checklist kembali ke senarai destinasi
+    window.addEventListener('popstate', function() {
+      if (skrin === 'sc-check') { gtRenderTajukList(); tunjuk('sc-list'); }
+    });
+    var _tunjukAsal = tunjuk;
+    tunjuk = function(id) {
+      if (id === 'sc-check' && skrin !== 'sc-check') { try { history.pushState({ gt: 1 }, ''); } catch (e) {} }
+      else if (id !== 'sc-check' && skrin === 'sc-check' && history.state && history.state.gt) { try { history.back(); } catch (e) {} }
+      _tunjukAsal(id);
+    };
+  })();
+  </script>
+  <script>
+  // Daftar service worker (sw.js): app boleh dipasang di phone dan dibuka tanpa internet
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('sw.js').catch(function(e) { console.warn('Service worker gagal didaftar:', e); });
+    });
+  }
+  </script>
+</body>
+</html>
